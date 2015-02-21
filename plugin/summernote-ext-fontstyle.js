@@ -19,7 +19,7 @@
    * ### load script 
    * 
    * ```
-   * < script src="plugin/summernote-ext-fontstyle.js"></script >
+   * < script src="plugin/fontstyle.js"></script >
    * ``` 
    * 
    * ### use a plugin in toolbar

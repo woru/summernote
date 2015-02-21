@@ -6,7 +6,7 @@
  * Copyright 2013-2015 Alan Hong. and other contributors
  * summernote may be freely distributed under the MIT license./
  *
- * Date: 2015-02-08T09:50Z
+ * Date: 2015-02-21T19:21Z
  */
 (function (factory) {
   /* global define */
@@ -3156,13 +3156,18 @@
       if (onBeforeChange) {
         onBeforeChange($editable.html(), $editable);
       }
+        
+      $.summernote.trigger('beforeChange', { data : $editable.html(), $editable : $editable});
     };
 
     var triggerOnChange = this.triggerOnChange = function ($editable) {
+      
       var onChange = $editable.data('callbacks').onChange;
       if (onChange) {
         onChange($editable.html(), $editable);
       }
+
+      $.summernote.trigger('change', { data : $editable.html(), $editable : $editable});
     };
 
     /**
@@ -3493,7 +3498,6 @@
 
     /**
      * fontsize
-     * FIXME: Still buggy
      *
      * @param {jQuery} $editable
      * @param {String} value - px
@@ -3501,16 +3505,13 @@
     this.fontSize = function ($editable, value) {
       beforeCommand($editable);
 
-      document.execCommand('fontSize', false, 3);
-      if (agent.isFF) {
-        // firefox: <font size="3"> to <span style='font-size={value}px;'>, buggy
-        $editable.find('font[size=3]').removeAttr('size').css('font-size', value + 'px');
-      } else {
-        // chrome: <span style="font-size: medium"> to <span style='font-size={value}px;'>
-        $editable.find('span').filter(function () {
-          return this.style.fontSize === 'medium';
-        }).css('font-size', value + 'px');
-      }
+      var rng = this.createRange($editable);
+      var spans = style.styleNodes(rng);
+      $.each(spans, function (idx, span) {
+        $(span).css({
+          'font-size': value + 'px'
+        });
+      });
 
       afterCommand($editable);
     };
@@ -4420,6 +4421,7 @@
      * @param {Object} layoutInfo
      * @param {File[]} files
      */
+    /*
     var insertImages = function (layoutInfo, files) {
       var $editor = layoutInfo.editor(),
           $editable = layoutInfo.editable();
@@ -4452,6 +4454,8 @@
         });
       }
     };
+      
+    */
 
     var commands = {
       /**
@@ -4492,7 +4496,7 @@
             editor.insertImage($editable, data);
           } else {
             // array of files
-            insertImages(layoutInfo, data);
+            $.summernote.plugin('image', 'insertImages', { layoutInfo : layoutInfo, files : data });
           }
         }).fail(function () {
           editor.restoreRange($editable);
@@ -4608,13 +4612,17 @@
       }
     };
 
+    /*
+     * @see plugin/mousedown
     var hMousedown = function (event) {
       //preventDefault Selection for FF, IE8+
       if (dom.isImg(event.target)) {
         event.preventDefault();
       }
     };
-
+    */
+    /*
+    @see plugin/update
     var hToolbarAndPopoverUpdate = function (event) {
       // delay for range after mouseup
       setTimeout(function () {
@@ -4631,19 +4639,24 @@
         handle.update(layoutInfo.handle(), styleInfo, isAirMode);
       }, 0);
     };
+    */
 
+   /*
+    @see plugin.scroll
     var hScroll = function (event) {
       var layoutInfo = makeLayoutInfo(event.currentTarget || event.target);
       //hide popover and handle when scrolled
       popover.hide(layoutInfo.popover());
       handle.hide(layoutInfo.handle());
     };
+    */
 
     /**
      * paste clipboard image
      *
      * @param {Event} event
      */
+    /*
     var hPasteClipboardImage = function (event) {
       var clipboardData = event.originalEvent.clipboardData;
       var layoutInfo = makeLayoutInfo(event.currentTarget || event.target);
@@ -4694,7 +4707,8 @@
 
       editor.afterCommand($editable);
     };
-
+    */
+      
     /**
      * `mousedown` event handler on $handle
      *  - controlSizing: resize image
@@ -4786,7 +4800,8 @@
           module.updateRecentColor(list.head($btn), eventName, value);
         }
 
-        hToolbarAndPopoverUpdate(event);
+        $.summernote.plugin('update', 'update', event);
+        //hToolbarAndPopoverUpdate(event);
       }
     };
 
@@ -4866,6 +4881,8 @@
      * @param {Object} layoutInfo - layout Informations
      * @param {Object} options
      */
+    /*
+    @see plugin/drop
     var handleDragAndDropEvent = function (layoutInfo, options) {
       if (options.disableDragAndDrop) {
         // prevent default drop event
@@ -4876,6 +4893,7 @@
         attachDragAndDropEvent(layoutInfo, options);
       }
     };
+    */
 
     /**
      * attach Drag and Drop Events
@@ -4883,15 +4901,18 @@
      * @param {Object} layoutInfo - layout Informations
      * @param {Object} options
      */
+    /*
+     @see plugin/drop
     var attachDragAndDropEvent = function (layoutInfo, options) {
       var collection = $(),
           $dropzone = layoutInfo.dropzone,
           $dropzoneMessage = layoutInfo.dropzone.find('.note-dropzone-message');
 
-      // show dropzone on dragenter when dragging a object to document.
+      // show dropzone on dragenter when dragging a object to document
+      // -but only if the editor is visible, i.e. has a positive width and height
       $document.on('dragenter', function (e) {
         var isCodeview = layoutInfo.editor.hasClass('codeview');
-        if (!isCodeview && !collection.length) {
+        if (!isCodeview && !collection.length && layoutInfo.editor.width() > 0 && layoutInfo.editor.height() > 0) {
           layoutInfo.editor.addClass('dragover');
           $dropzone.width(layoutInfo.editor.width());
           $dropzone.height(layoutInfo.editor.height());
@@ -4906,11 +4927,6 @@
       }).on('drop', function () {
         collection = $();
         layoutInfo.editor.removeClass('dragover');
-      }).on('mouseout', function (e) {
-        collection = collection.not(e.target);
-        if (!collection.length) {
-          layoutInfo.editor.removeClass('dragover');
-        }
       });
 
       // change dropzone's message on hover.
@@ -4934,7 +4950,7 @@
 
         if (dataTransfer && dataTransfer.files && dataTransfer.files.length) {
           layoutInfo.editable().focus();
-          insertImages(layoutInfo, dataTransfer.files);
+          $.summernote.plugin('image', 'insertImages', { layoutInfo : layoutInfo, files : dataTransfer.files });
         } else if (html) {
           $(html).each(function () {
             layoutInfo.editable().focus();
@@ -4946,7 +4962,7 @@
         }
       }).on('dragover', false); // prevent default dragover event
     };
-
+    */
 
     /**
      * bind KeyMap on keydown
@@ -4972,8 +4988,12 @@
         var keyName = key.nameFromCode[event.keyCode];
         if (keyName) { aKey.push(keyName); }
 
-        var eventName = keyMap[aKey.join('+')];
+        var shortcutKey = aKey.join('+');
+        $.summernote.keymap(shortcutKey);
+
+        var eventName = keyMap[shortcutKey];
         if (eventName) {
+
           if ($.summernote.pluginEvents[eventName]) {
             var plugin = $.summernote.pluginEvents[eventName];
             if ($.isFunction(plugin)) {
@@ -4992,6 +5012,12 @@
       });
     };
 
+    this.bindEvent = function (layoutInfo, eventName) {
+      layoutInfo.editable.on(eventName, function (e) {
+        $.summernote.trigger(eventName, e);
+      });
+    };
+      
     /**
      * attach eventhandler
      *
@@ -5007,14 +5033,25 @@
      * @param {function(event)} [options.onChange]
      */
     this.attach = function (layoutInfo, options) {
+        
+      // trigger plugin event 
+      this.bindEvent(layoutInfo, 'paste');
+      this.bindEvent(layoutInfo, 'mousedown');
+      this.bindEvent(layoutInfo, 'scroll');
+      this.bindEvent(layoutInfo, 'keyup');
+      this.bindEvent(layoutInfo, 'keydown');
+      this.bindEvent(layoutInfo, 'mouseup');
+      this.bindEvent(layoutInfo, 'focus');
+      this.bindEvent(layoutInfo, 'blur');
+
       // handlers for editable
       if (options.shortcuts) {
         this.bindKeyMap(layoutInfo, options.keyMap[agent.isMac ? 'mac' : 'pc']);
       }
-      layoutInfo.editable.on('mousedown', hMousedown);
-      layoutInfo.editable.on('keyup mouseup', hToolbarAndPopoverUpdate);
-      layoutInfo.editable.on('scroll', hScroll);
-      layoutInfo.editable.on('paste', hPasteClipboardImage);
+      //layoutInfo.editable.on('mousedown', hMousedown);  // redefine plugin
+      //layoutInfo.editable.on('keyup mouseup', hToolbarAndPopoverUpdate);
+      //layoutInfo.editable.on('scroll', hScroll);  // redefine plugin
+      //layoutInfo.editable.on('paste', hPasteClipboardImage);  // redefine plugin
 
       // handler for handle and popover
       layoutInfo.handle.on('mousedown', hHandleMousedown);
@@ -5024,7 +5061,7 @@
       // handlers for frame mode (toolbar, statusbar)
       if (!options.airMode) {
         // handler for drag and drop
-        handleDragAndDropEvent(layoutInfo, options);
+        //handleDragAndDropEvent(layoutInfo, options);
 
         // handler for toolbar
         layoutInfo.toolbar.on('click', hToolbarAndPopoverClick);
@@ -5081,6 +5118,7 @@
       if (options.onChange) {
         var hChange = function () {
           editor.triggerOnChange(layoutInfo.editable);
+
         };
 
         if (agent.isMSIE) {
@@ -5937,7 +5975,7 @@
       });
 
       //08. create Dropzone
-      $('<div class="note-dropzone"><div class="note-dropzone-message"></div></div>').prependTo($editor);
+      //$('<div class="note-dropzone"><div class="note-dropzone-message"></div></div>').prependTo($editor);
 
       //09. Editor/Holder switch
       $editor.insertAfter($holder);
@@ -6069,6 +6107,8 @@
 
   var renderer = new Renderer();
   var eventHandler = new EventHandler();
+    
+  var plugins = {};
 
   $.extend($.summernote, {
     /** @property {Renderer} */
@@ -6084,7 +6124,9 @@
     core: {
       agent: agent,
       dom: dom,
-      range: range
+      range: range,
+      list : list,
+      func : func
     },
     /** 
      * @property {Object} 
@@ -6195,6 +6237,47 @@
     if (plugin.options) {
       $.extend($.summernote.options, plugin.options);
     }
+      
+    plugins[plugin.name] = plugin;
+  };
+    
+  // call plugin api
+  $.summernote.plugin = function (name, callback, data, fn) {
+    if (plugins[name] && plugins[name][callback]) {
+      var result = plugins[name][callback].call(plugins[name], data);
+
+      if (fn) {
+        fn(result);
+      } else {
+        return result;
+      }
+    } else {
+      if (callback !== '$init') {
+        //console.error('Not exists plugin callback : ' + name + '.' + callback);
+      }
+
+    }
+
+  };
+    
+  $.summernote.trigger = function (eventName, e) {
+    for (var name in plugins) {
+      $.summernote.plugin(name, '$' + eventName, e);
+    }
+  };
+
+  $.summernote.pluginEach = function (callback) {
+    for (var name in plugins) {
+      callback(name);
+    }
+  };
+
+  $.summernote.keymap = function (key, os) {
+    for (var name in plugins) {
+      if (plugins[name] && plugins[name].keyMap && plugins[name].keyMap[os] && plugins[name].keyMap[os][key]) {
+        $.summernote.plugin(name, plugins[name].keyMap[os][key]);
+      }
+    }
   };
 
   /*
@@ -6220,7 +6303,7 @@
 
       // Include langInfo in options for later use, e.g. for image drag-n-drop
       // Setup language info with en-US as default
-      options.langInfo = $.extend(true, {}, $.summernote.lang['en-US'], $.summernote.lang[options.lang]);
+      $.summernote.options.langInfo = options.langInfo = $.extend(true, {}, $.summernote.lang['en-US'], $.summernote.lang[options.lang]);
 
       this.each(function (idx, holder) {
         var $holder = $(holder);
@@ -6243,6 +6326,8 @@
             }
           });
         }
+
+        $.summernote.trigger('init', info);
       });
 
       // focus on first editable element
@@ -6255,7 +6340,6 @@
       if (this.length && options.oninit) {
         options.oninit();
       }
-
       return this;
     },
     //
@@ -6328,4 +6412,513 @@
       return this;
     }
   });
+}));
+(function (factory) {
+  /* global define */
+  if (typeof define === 'function' && define.amd) {
+    // AMD. Register as an anonymous module.
+    define(['jquery'], factory);
+  } else {
+    // Browser globals: jQuery
+    factory(window.jQuery);
+  }
+}(function ($) {
+  var Class = {
+      name : 'drop',
+      
+      $init : function (layoutInfo) {
+        var $document = $(document);
+        var options = $.summernote.options;
+        var editor = $.summernote.eventHandler.getEditor();
+
+
+        if (options.disableDragAndDrop) {
+          // prevent default drop event
+          $document.on('drop', function (e) {
+            e.preventDefault();
+          });
+          return;
+        }
+        
+        // add ui dropzone
+        var $editor = layoutInfo.editor;
+        $('<div class="note-dropzone"><div class="note-dropzone-message"></div></div>').prependTo($editor);
+
+        var collection = $(),
+          $dropzone = $editor.find('.note-dropzone'),
+          $dropzoneMessage = $dropzone.find('.note-dropzone-message');
+
+        // show dropzone on dragenter when dragging a object to document
+        // -but only if the editor is visible, i.e. has a positive width and height
+        $document.on('dragenter', function (e) {
+          var isCodeview = layoutInfo.editor.hasClass('codeview');
+          if (!isCodeview && !collection.length && layoutInfo.editor.width() > 0 && layoutInfo.editor.height() > 0) {
+            layoutInfo.editor.addClass('dragover');
+            $dropzone.width(layoutInfo.editor.width());
+            $dropzone.height(layoutInfo.editor.height());
+            $dropzoneMessage.text(options.langInfo.image.dragImageHere);
+          }
+          collection = collection.add(e.target);
+        }).on('dragleave', function (e) {
+          collection = collection.not(e.target);
+          if (!collection.length) {
+            layoutInfo.editor.removeClass('dragover');
+          }
+        }).on('drop', function () {
+          collection = $();
+          layoutInfo.editor.removeClass('dragover');
+        });
+
+        // change dropzone's message on hover.
+        $dropzone.on('dragenter', function () {
+          $dropzone.addClass('hover');
+          $dropzoneMessage.text(options.langInfo.image.dropImage);
+        }).on('dragleave', function () {
+          $dropzone.removeClass('hover');
+          $dropzoneMessage.text(options.langInfo.image.dragImageHere);
+        });
+
+        // attach dropImage
+        $dropzone.on('drop', function (event) {
+          event.preventDefault();
+
+          var dataTransfer = event.originalEvent.dataTransfer;
+          var html = dataTransfer.getData('text/html');
+          var text = dataTransfer.getData('text/plain');
+
+          var layoutInfo = $.summernote.plugin('layoutInfo', 'make', (event.currentTarget || event.target));
+
+          if (dataTransfer && dataTransfer.files && dataTransfer.files.length) {
+            layoutInfo.editable().focus();
+            $.summernote.plugin('image', 'insertImages', { layoutInfo : layoutInfo, files : dataTransfer.files });
+          } else if (html) {
+            $(html).each(function () {
+              layoutInfo.editable().focus();
+              editor.insertNode(layoutInfo.editable(), this);
+            });
+          } else if (text) {
+            layoutInfo.editable().focus();
+            editor.insertText(layoutInfo.editable(), text);
+          }
+        }).on('dragover', false); // prevent default dragover event
+      }
+    };
+    
+  $.summernote.addPlugin(Class);
+    
+
+}));
+(function (factory) {
+  /* global define */
+  if (typeof define === 'function' && define.amd) {
+    // AMD. Register as an anonymous module.
+    define(['jquery'], factory);
+  } else {
+    // Browser globals: jQuery
+    factory(window.jQuery);
+  }
+}(function ($) {
+  var Class = {
+      name : 'handle',
+      $update : function (data) {
+        var $handle = data.layoutInfo.handle();
+        var styleInfo = data.styleInfo;
+        var isAirMode = data.isAirMode;
+          
+        var $selection = $handle.find('.note-control-selection');
+        if (styleInfo.image) {
+          var $image = $(styleInfo.image);
+          var pos = isAirMode ? $image.offset() : $image.position();
+
+          // include margin
+          var imageSize = {
+              w: $image.outerWidth(true),
+              h: $image.outerHeight(true)
+            };
+
+          $selection.css({
+              display: 'block',
+              left: pos.left,
+              top: pos.top,
+              width: imageSize.w,
+              height: imageSize.h
+            }).data('target', styleInfo.image); // save current image element.
+          var sizingText = imageSize.w + 'x' + imageSize.h;
+          $selection.find('.note-control-selection-info').text(sizingText);
+        } else {
+          $selection.hide();
+        }
+      },
+      
+      hide :  function ($handle) {
+        $handle.children().hide();
+      }
+    };
+    
+  $.summernote.addPlugin(Class);
+    
+
+}));
+(function (factory) {
+  /* global define */
+  if (typeof define === 'function' && define.amd) {
+    // AMD. Register as an anonymous module.
+    define(['jquery'], factory);
+  } else {
+    // Browser globals: jQuery
+    factory(window.jQuery);
+  }
+}(function ($) {
+
+  var async = $.summernote.core.async;
+
+  var insertImages = function (layoutInfo, files) {
+    var editor = $.summernote.eventHandler.getEditor(),
+        $editable = layoutInfo.editable();
+
+    var options = $.summernote.options;
+
+      // If onImageUpload options setted
+    if (options.onImageUpload) {
+      options.onImageUpload(files, editor, $editable);
+      // else insert Image as dataURL
+    } else {
+      $.each(files, function (idx, file) {
+        var filename = file.name;
+        if (options.maximumImageFileSize && options.maximumImageFileSize < file.size) {
+          if (options.onImageUploadError) {
+            options.onImageUploadError(options.langInfo.image.maximumFileSizeError);
+          } else {
+            alert(options.langInfo.image.maximumFileSizeError);
+          }
+        } else {
+          async.readFileAsDataURL(file).then(function (sDataURL) {
+            editor.insertImage($editable, sDataURL, filename);
+          }).fail(function () {
+            if (options.onImageUploadError) {
+              options.onImageUploadError();
+            }
+          });
+        }
+      });
+    }
+  };
+    
+  var Class = {
+      name : 'image',
+      insertImages : function (data) {
+        insertImages(data.layoutInfo, data.files);
+      }
+    };
+    
+  $.summernote.addPlugin(Class);
+    
+
+}));
+(function (factory) {
+  /* global define */
+  if (typeof define === 'function' && define.amd) {
+    // AMD. Register as an anonymous module.
+    define(['jquery'], factory);
+  } else {
+    // Browser globals: jQuery
+    factory(window.jQuery);
+  }
+}(function ($) {
+  var list = $.summernote.core.list;
+  var dom = $.summernote.core.dom;
+  var Class = {
+      name : 'layoutInfo',
+      make : function (descendant) {
+        var $target = $(descendant).closest('.note-editor, .note-air-editor, .note-air-layout');
+
+        if (!$target.length) { return null; }
+
+        var $editor;
+        if ($target.is('.note-editor, .note-air-editor')) {
+          $editor = $target;
+        } else {
+          $editor = $('#note-editor-' + list.last($target.attr('id').split('-')));
+        }
+
+        return dom.buildLayoutInfo($editor);
+      }
+    };
+    
+  $.summernote.addPlugin(Class);
+    
+
+}));
+(function (factory) {
+  /* global define */
+  if (typeof define === 'function' && define.amd) {
+    // AMD. Register as an anonymous module.
+    define(['jquery'], factory);
+  } else {
+    // Browser globals: jQuery
+    factory(window.jQuery);
+  }
+}(function ($) {
+
+  var dom = $.summernote.core.dom;
+    
+  var Class = {
+      name : 'mousedown',
+      $mosuedown : function (event) {
+        if (dom.isImg(event.target)) {
+          event.preventDefault();
+        }
+      }
+    };
+    
+  $.summernote.addPlugin(Class);
+    
+
+}));
+(function (factory) {
+  /* global define */
+  if (typeof define === 'function' && define.amd) {
+    // AMD. Register as an anonymous module.
+    define(['jquery'], factory);
+  } else {
+    // Browser globals: jQuery
+    factory(window.jQuery);
+  }
+}(function ($) {
+
+  var list = $.summernote.core.list;
+    
+  var Class = {
+      name : 'pasteClipboardImage',
+      $paste : function (event) {
+        var clipboardData = event.originalEvent.clipboardData;
+        var layoutInfo = $.summernote.plugin('layoutInfo', 'make', (event.currentTarget || event.target));
+        var _editor = $.summernote.eventHandler.getEditor();
+        var $editable = layoutInfo.editable();
+
+        if (!clipboardData || !clipboardData.items || !clipboardData.items.length) {
+          // only can run if it has onImageUpload method
+          if (!$.summernote.options.onImageUpload) {
+            return;
+          }
+
+          // save cursor
+          _editor.saveNode($editable);
+          _editor.saveRange($editable);
+
+          $editable.html('');
+
+          setTimeout(function () {
+            var $img = $editable.find('img');
+            var datauri = $img[0].src;
+
+            var data = atob(datauri.split(',')[1]);
+            var array = new Uint8Array(data.length);
+            for (var i = 0; i < data.length; i++) {
+              array[i] = data.charCodeAt(i);
+            }
+
+            var blob = new Blob([array], { type : 'image/png'});
+            blob.name = 'clipboard.png';
+
+            _editor.restoreNode($editable);
+            _editor.restoreRange($editable);
+
+            $.summernote.plugin('image', 'insertImages', { layoutInfo : layoutInfo, files : [blob]});
+
+            _editor.afterCommand($editable);
+          }, 0);
+
+          return;
+        }
+
+        var item = list.head(clipboardData.items);
+        var isClipboardImage = item.kind === 'file' && item.type.indexOf('image/') !== -1;
+
+        if (isClipboardImage) {
+          $.summernote.plugin('image', 'insertImages', { layoutInfo : layoutInfo, files : [item.getAsFile()]});
+        }
+
+        _editor.afterCommand($editable);
+      }
+    };
+    
+  $.summernote.addPlugin(Class);
+
+}));
+(function (factory) {
+  /* global define */
+  if (typeof define === 'function' && define.amd) {
+    // AMD. Register as an anonymous module.
+    define(['jquery'], factory);
+  } else {
+    // Browser globals: jQuery
+    factory(window.jQuery);
+  }
+}(function ($) {
+  
+  var list = $.summernote.core.list;
+  var func = $.summernote.core.func;
+
+  /**
+   * returns position from placeholder
+   *
+   * @private
+   * @param {Node} placeholder
+   * @param {Boolean} isAirMode
+   * @return {Object}
+   * @return {Number} return.left
+   * @return {Number} return.top
+   */
+  var posFromPlaceholder = function (placeholder, isAirMode) {
+    var $placeholder = $(placeholder);
+    var pos = isAirMode ? $placeholder.offset() : $placeholder.position();
+    var height = $placeholder.outerHeight(true); // include margin
+
+    // popover below placeholder.
+    return {
+      left: pos.left,
+      top: pos.top + height
+    };
+  };
+
+  /**
+   * show popover
+   *
+   * @private
+   * @param {jQuery} popover
+   * @param {Position} pos
+   */
+  var showPopover = function ($popover, pos) {
+    $popover.css({
+      display: 'block',
+      left: pos.left,
+      top: pos.top
+    });
+  };
+
+  var PX_POPOVER_ARROW_OFFSET_X = 20;
+  
+  
+  var Class = {
+      name : 'popover',
+      $update : function (data) {
+        var $popover = data.layoutInfo.popover();
+        var styleInfo = data.styleInfo;
+        var isAirMode = data.isAirMode;
+
+        // button 업데이트는 개별 버튼이 $update 를 알아서 구현한다 ? 
+        //button.update($popover, styleInfo);
+
+        var $linkPopover = $popover.find('.note-link-popover');
+        if (styleInfo.anchor) {
+          var $anchor = $linkPopover.find('a');
+          var href = $(styleInfo.anchor).attr('href');
+          $anchor.attr('href', href).html(href);
+          showPopover($linkPopover, posFromPlaceholder(styleInfo.anchor, isAirMode));
+        } else {
+          $linkPopover.hide();
+        }
+
+        var $imagePopover = $popover.find('.note-image-popover');
+        if (styleInfo.image) {
+          showPopover($imagePopover, posFromPlaceholder(styleInfo.image, isAirMode));
+        } else {
+          $imagePopover.hide();
+        }
+
+        var $airPopover = $popover.find('.note-air-popover');
+        if (isAirMode && !styleInfo.range.isCollapsed()) {
+          var rect = list.last(styleInfo.range.getClientRects());
+          if (rect) {
+            var bnd = func.rect2bnd(rect);
+            showPopover($airPopover, {
+              left: Math.max(bnd.left + bnd.width / 2 - PX_POPOVER_ARROW_OFFSET_X, 0),
+              top: bnd.top + bnd.height
+            });
+          }
+        } else {
+          $airPopover.hide();
+        }
+      },
+
+      updateRecentColor : function (button, eventName, value) {
+        button.updateRecentColor(button, eventName, value);
+      },
+      
+      hide : function ($popover) {
+        $popover.children().hide();
+      }
+    };
+    
+  $.summernote.addPlugin(Class);
+    
+
+}));
+(function (factory) {
+  /* global define */
+  if (typeof define === 'function' && define.amd) {
+    // AMD. Register as an anonymous module.
+    define(['jquery'], factory);
+  } else {
+    // Browser globals: jQuery
+    factory(window.jQuery);
+  }
+}(function ($) {
+  var Class = {
+      name : 'scroll',
+      $scroll : function (event) {
+        var layoutInfo = $.summernote.plugin('layoutInfo', 'make', (event.currentTarget || event.target));
+        //hide popover and handle when scrolled
+        $.summernote.plugin('popover', 'hide', layoutInfo.popover());
+        $.summernote.plugin('handle', 'hide', layoutInfo.handle());
+      }
+    };
+    
+  $.summernote.addPlugin(Class);
+    
+
+}));
+(function (factory) {
+  /* global define */
+  if (typeof define === 'function' && define.amd) {
+    // AMD. Register as an anonymous module.
+    define(['jquery'], factory);
+  } else {
+    // Browser globals: jQuery
+    factory(window.jQuery);
+  }
+}(function ($) {
+  var Class = {
+      'name' : 'update',
+      update : function (event) {
+        setTimeout(function () {
+          var layoutInfo = $.summernote.plugin('layoutInfo', 'make', (event.currentTarget || event.target));
+          var $editor = layoutInfo.editor();
+          var editor = $.summernote.eventHandler.getEditor();
+          var styleInfo = editor.currentStyle(event.target);
+          if (!styleInfo) { return; }
+
+          var isAirMode = $editor.data('options').airMode;
+          if (!isAirMode) {
+            $.summernote.trigger('update', { layoutInfo : layoutInfo, styleInfo : styleInfo, isAirMode : isAirMode});
+          }
+
+          //self.popoverUpdate(layoutInfo.popover(), styleInfo, isAirMode);
+          //self.handleUpdate(layoutInfo.handle(), styleInfo, isAirMode);
+        }, 0);
+      },
+      
+      $keyup : function (event) {
+        this.update(event);
+      },
+      
+      $mouseup : function (event) {
+        this.update(event);
+      }
+    };
+    
+  $.summernote.addPlugin(Class);
+    
+
 }));

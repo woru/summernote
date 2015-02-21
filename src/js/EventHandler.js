@@ -68,6 +68,7 @@ define([
      * @param {Object} layoutInfo
      * @param {File[]} files
      */
+    /*
     var insertImages = function (layoutInfo, files) {
       var $editor = layoutInfo.editor(),
           $editable = layoutInfo.editable();
@@ -100,6 +101,8 @@ define([
         });
       }
     };
+      
+    */
 
     var commands = {
       /**
@@ -140,7 +143,7 @@ define([
             editor.insertImage($editable, data);
           } else {
             // array of files
-            insertImages(layoutInfo, data);
+            $.summernote.plugin('image', 'insertImages', { layoutInfo : layoutInfo, files : data });
           }
         }).fail(function () {
           editor.restoreRange($editable);
@@ -256,13 +259,17 @@ define([
       }
     };
 
+    /*
+     * @see plugin/mousedown
     var hMousedown = function (event) {
       //preventDefault Selection for FF, IE8+
       if (dom.isImg(event.target)) {
         event.preventDefault();
       }
     };
-
+    */
+    /*
+    @see plugin/update
     var hToolbarAndPopoverUpdate = function (event) {
       // delay for range after mouseup
       setTimeout(function () {
@@ -279,19 +286,24 @@ define([
         handle.update(layoutInfo.handle(), styleInfo, isAirMode);
       }, 0);
     };
+    */
 
+   /*
+    @see plugin.scroll
     var hScroll = function (event) {
       var layoutInfo = makeLayoutInfo(event.currentTarget || event.target);
       //hide popover and handle when scrolled
       popover.hide(layoutInfo.popover());
       handle.hide(layoutInfo.handle());
     };
+    */
 
     /**
      * paste clipboard image
      *
      * @param {Event} event
      */
+    /*
     var hPasteClipboardImage = function (event) {
       var clipboardData = event.originalEvent.clipboardData;
       var layoutInfo = makeLayoutInfo(event.currentTarget || event.target);
@@ -342,7 +354,8 @@ define([
 
       editor.afterCommand($editable);
     };
-
+    */
+      
     /**
      * `mousedown` event handler on $handle
      *  - controlSizing: resize image
@@ -434,7 +447,8 @@ define([
           module.updateRecentColor(list.head($btn), eventName, value);
         }
 
-        hToolbarAndPopoverUpdate(event);
+        $.summernote.plugin('update', 'update', event);
+        //hToolbarAndPopoverUpdate(event);
       }
     };
 
@@ -514,6 +528,8 @@ define([
      * @param {Object} layoutInfo - layout Informations
      * @param {Object} options
      */
+    /*
+    @see plugin/drop
     var handleDragAndDropEvent = function (layoutInfo, options) {
       if (options.disableDragAndDrop) {
         // prevent default drop event
@@ -524,6 +540,7 @@ define([
         attachDragAndDropEvent(layoutInfo, options);
       }
     };
+    */
 
     /**
      * attach Drag and Drop Events
@@ -531,6 +548,8 @@ define([
      * @param {Object} layoutInfo - layout Informations
      * @param {Object} options
      */
+    /*
+     @see plugin/drop
     var attachDragAndDropEvent = function (layoutInfo, options) {
       var collection = $(),
           $dropzone = layoutInfo.dropzone,
@@ -578,7 +597,7 @@ define([
 
         if (dataTransfer && dataTransfer.files && dataTransfer.files.length) {
           layoutInfo.editable().focus();
-          insertImages(layoutInfo, dataTransfer.files);
+          $.summernote.plugin('image', 'insertImages', { layoutInfo : layoutInfo, files : dataTransfer.files });
         } else if (html) {
           $(html).each(function () {
             layoutInfo.editable().focus();
@@ -590,7 +609,7 @@ define([
         }
       }).on('dragover', false); // prevent default dragover event
     };
-
+    */
 
     /**
      * bind KeyMap on keydown
@@ -616,8 +635,12 @@ define([
         var keyName = key.nameFromCode[event.keyCode];
         if (keyName) { aKey.push(keyName); }
 
-        var eventName = keyMap[aKey.join('+')];
+        var shortcutKey = aKey.join('+');
+        $.summernote.keymap(shortcutKey);
+
+        var eventName = keyMap[shortcutKey];
         if (eventName) {
+
           if ($.summernote.pluginEvents[eventName]) {
             var plugin = $.summernote.pluginEvents[eventName];
             if ($.isFunction(plugin)) {
@@ -636,6 +659,12 @@ define([
       });
     };
 
+    this.bindEvent = function (layoutInfo, eventName) {
+      layoutInfo.editable.on(eventName, function (e) {
+        $.summernote.trigger(eventName, e);
+      });
+    };
+      
     /**
      * attach eventhandler
      *
@@ -651,14 +680,25 @@ define([
      * @param {function(event)} [options.onChange]
      */
     this.attach = function (layoutInfo, options) {
+        
+      // trigger plugin event 
+      this.bindEvent(layoutInfo, 'paste');
+      this.bindEvent(layoutInfo, 'mousedown');
+      this.bindEvent(layoutInfo, 'scroll');
+      this.bindEvent(layoutInfo, 'keyup');
+      this.bindEvent(layoutInfo, 'keydown');
+      this.bindEvent(layoutInfo, 'mouseup');
+      this.bindEvent(layoutInfo, 'focus');
+      this.bindEvent(layoutInfo, 'blur');
+
       // handlers for editable
       if (options.shortcuts) {
         this.bindKeyMap(layoutInfo, options.keyMap[agent.isMac ? 'mac' : 'pc']);
       }
-      layoutInfo.editable.on('mousedown', hMousedown);
-      layoutInfo.editable.on('keyup mouseup', hToolbarAndPopoverUpdate);
-      layoutInfo.editable.on('scroll', hScroll);
-      layoutInfo.editable.on('paste', hPasteClipboardImage);
+      //layoutInfo.editable.on('mousedown', hMousedown);  // redefine plugin
+      //layoutInfo.editable.on('keyup mouseup', hToolbarAndPopoverUpdate);
+      //layoutInfo.editable.on('scroll', hScroll);  // redefine plugin
+      //layoutInfo.editable.on('paste', hPasteClipboardImage);  // redefine plugin
 
       // handler for handle and popover
       layoutInfo.handle.on('mousedown', hHandleMousedown);
@@ -668,7 +708,7 @@ define([
       // handlers for frame mode (toolbar, statusbar)
       if (!options.airMode) {
         // handler for drag and drop
-        handleDragAndDropEvent(layoutInfo, options);
+        //handleDragAndDropEvent(layoutInfo, options);
 
         // handler for toolbar
         layoutInfo.toolbar.on('click', hToolbarAndPopoverClick);
@@ -725,6 +765,7 @@ define([
       if (options.onChange) {
         var hChange = function () {
           editor.triggerOnChange(layoutInfo.editable);
+
         };
 
         if (agent.isMSIE) {

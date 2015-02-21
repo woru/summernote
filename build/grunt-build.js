@@ -40,6 +40,12 @@ module.exports = function (grunt) {
       // 02.  Embed Date
       var date = (new Date()).toISOString().replace(/:\d+\.\d+Z$/, 'Z');
       compiled = compiled.replace(/@DATE/g, date);
+      
+      
+      // 03. add plugin list 
+      grunt.file.expand('src/js/plugin/**/*.js').forEach(function (file) {
+        compiled += grunt.file.read(file);
+      });
 
       grunt.file.write(outputPath, compiled);
     };

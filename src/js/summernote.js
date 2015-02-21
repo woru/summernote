@@ -1,9 +1,9 @@
 define([
   'summernote/core/agent', 'summernote/core/dom',
-  'summernote/core/range',
+  'summernote/core/range', 'summernote/core/list', 'summernote/core/func',
   'summernote/settings',
   'summernote/EventHandler', 'summernote/Renderer'
-], function (agent, dom, range, settings, EventHandler, Renderer) {
+], function (agent, dom, range, list, func, settings, EventHandler, Renderer) {
 
   // jQuery namespace for summernote
   /**
@@ -22,6 +22,8 @@ define([
 
   var renderer = new Renderer();
   var eventHandler = new EventHandler();
+    
+  var plugins = {};
 
   $.extend($.summernote, {
     /** @property {Renderer} */
@@ -37,7 +39,9 @@ define([
     core: {
       agent: agent,
       dom: dom,
-      range: range
+      range: range,
+      list : list,
+      func : func
     },
     /** 
      * @property {Object} 
@@ -148,6 +152,47 @@ define([
     if (plugin.options) {
       $.extend($.summernote.options, plugin.options);
     }
+      
+    plugins[plugin.name] = plugin;
+  };
+    
+  // call plugin api
+  $.summernote.plugin = function (name, callback, data, fn) {
+    if (plugins[name] && plugins[name][callback]) {
+      var result = plugins[name][callback].call(plugins[name], data);
+
+      if (fn) {
+        fn(result);
+      } else {
+        return result;
+      }
+    } else {
+      if (callback !== '$init') {
+        //console.error('Not exists plugin callback : ' + name + '.' + callback);
+      }
+
+    }
+
+  };
+    
+  $.summernote.trigger = function (eventName, e) {
+    for (var name in plugins) {
+      $.summernote.plugin(name, '$' + eventName, e);
+    }
+  };
+
+  $.summernote.pluginEach = function (callback) {
+    for (var name in plugins) {
+      callback(name);
+    }
+  };
+
+  $.summernote.keymap = function (key, os) {
+    for (var name in plugins) {
+      if (plugins[name] && plugins[name].keyMap && plugins[name].keyMap[os] && plugins[name].keyMap[os][key]) {
+        $.summernote.plugin(name, plugins[name].keyMap[os][key]);
+      }
+    }
   };
 
   /*
@@ -173,7 +218,7 @@ define([
 
       // Include langInfo in options for later use, e.g. for image drag-n-drop
       // Setup language info with en-US as default
-      options.langInfo = $.extend(true, {}, $.summernote.lang['en-US'], $.summernote.lang[options.lang]);
+      $.summernote.options.langInfo = options.langInfo = $.extend(true, {}, $.summernote.lang['en-US'], $.summernote.lang[options.lang]);
 
       this.each(function (idx, holder) {
         var $holder = $(holder);
@@ -196,6 +241,8 @@ define([
             }
           });
         }
+
+        $.summernote.trigger('init', info);
       });
 
       // focus on first editable element
@@ -208,7 +255,6 @@ define([
       if (this.length && options.oninit) {
         options.oninit();
       }
-
       return this;
     },
     //

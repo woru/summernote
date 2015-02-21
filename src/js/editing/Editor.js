@@ -116,13 +116,18 @@ define([
       if (onBeforeChange) {
         onBeforeChange($editable.html(), $editable);
       }
+        
+      $.summernote.trigger('beforeChange', { data : $editable.html(), $editable : $editable});
     };
 
     var triggerOnChange = this.triggerOnChange = function ($editable) {
+      
       var onChange = $editable.data('callbacks').onChange;
       if (onChange) {
         onChange($editable.html(), $editable);
       }
+
+      $.summernote.trigger('change', { data : $editable.html(), $editable : $editable});
     };
 
     /**

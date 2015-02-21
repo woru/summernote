@@ -781,22 +781,22 @@ define([
       $('<textarea class="note-codable"></textarea>').prependTo($editor);
 
       //04. create Toolbar
-      var toolbarHTML = '';
+      var toolbarHTML = $('<div class="note-toolbar btn-toolbar" />');
       for (var idx = 0, len = options.toolbar.length; idx < len; idx ++) {
         var groupName = options.toolbar[idx][0];
         var groupButtons = options.toolbar[idx][1];
 
-        toolbarHTML += '<div class="note-' + groupName + ' btn-group">';
+        var $group = $('<div class="note-' + groupName + ' btn-group" />');
+        toolbarHTML.append($group);
+        
         for (var i = 0, btnLength = groupButtons.length; i < btnLength; i++) {
           var buttonInfo = tplButtonInfo[groupButtons[i]];
           // continue creating toolbar even if a button doesn't exist
           if (!$.isFunction(buttonInfo)) { continue; }
-          toolbarHTML += buttonInfo(langInfo, options);
+          $group.append(buttonInfo(langInfo, options));
         }
-        toolbarHTML += '</div>';
-      }
 
-      toolbarHTML = '<div class="note-toolbar btn-toolbar">' + toolbarHTML + '</div>';
+      }
 
       var $toolbar = $(toolbarHTML).prependTo($editor);
       var keyMap = options.keyMap[agent.isMac ? 'mac' : 'pc'];
@@ -818,7 +818,7 @@ define([
       });
 
       //08. create Dropzone
-      $('<div class="note-dropzone"><div class="note-dropzone-message"></div></div>').prependTo($editor);
+      //$('<div class="note-dropzone"><div class="note-dropzone-message"></div></div>').prependTo($editor);
 
       //09. Editor/Holder switch
       $editor.insertAfter($holder);
