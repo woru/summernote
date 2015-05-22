@@ -3,7 +3,12 @@ define([
   'summernote/core/dom',
   'summernote/core/func',
   'summernote/renderer/bootstrap'
-], function (agent, dom, func, DefaultUI) {
+], function (agent, dom, func, bootstrap) {
+
+  var UIList = {
+    'bootstrap' : bootstrap
+  };
+
   /**
    * @class Renderer
    *
@@ -11,10 +16,8 @@ define([
    *
    * rendering toolbar and editable
    */
-  var Renderer = function (ui) {
-
-    this.ui = ui = ui || DefaultUI;
-
+  var Renderer = function () {
+    var ui;
     /**
      * bootstrap button template
      * @private
@@ -853,6 +856,15 @@ define([
      * @param {Object} options
      */
     this.createLayout = function ($holder, options) {
+
+      if (typeof  options.ui == 'string') {
+        ui = this.ui = UIList[options.ui] || DefaultUI;
+      } else if (options.ui) {
+        ui = this.ui = options.ui || DefaultUI;
+      } else {
+        ui = UIList['bootstrap'];
+      }
+
       if (options.airMode) {
         this.createLayoutByAirMode($holder, options);
       } else {

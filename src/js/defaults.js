@@ -83,6 +83,8 @@ define('summernote/defaults', function () {
 
       plugin : { },
 
+      ui : null,
+
       // air mode: inline editor
       airMode: false,
       // airPopover: [

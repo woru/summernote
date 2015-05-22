@@ -211,7 +211,6 @@ define([
 
       this.each(function (idx, holder) {
         var $holder = $(holder);
-
         // if layout isn't created yet, createLayout and attach events
         if (!renderer.hasNoteEditor($holder)) {
           renderer.createLayout($holder, options);
