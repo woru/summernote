@@ -789,9 +789,9 @@ define([
       }
     };
 
-    this.ui = function($editable) {
+    this.ui = function ($editable) {
       return handler.ui($editable);
-    }
+    };
   };
 
   return Editor;
