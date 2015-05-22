@@ -8,7 +8,7 @@ define([
    *
    * Toolbar
    */
-  var Toolbar = function () {
+  var Toolbar = function (handler) {
     var button = new Button();
 
     this.update = function ($toolbar, styleInfo) {
@@ -50,7 +50,8 @@ define([
      */
     this.updateFullscreen = function ($container, bFullscreen) {
       var $btn = $container.find('button[data-event="fullscreen"]');
-      $btn.toggleClass('active', bFullscreen);
+      var ui = handler.ui($container);
+      ui.toggleButton($btn, bFullscreen);
     };
 
     /**
@@ -59,7 +60,8 @@ define([
      */
     this.updateCodeview = function ($container, isCodeview) {
       var $btn = $container.find('button[data-event="codeview"]');
-      $btn.toggleClass('active', isCodeview);
+      var ui = handler.ui($container);
+      ui.toggleButton($btn, isCodeview);
 
       if (isCodeview) {
         this.deactivate($container);
@@ -91,7 +93,8 @@ define([
       isActive = (isActive === false) ? false : true;
 
       var $button = this.get($editable, name);
-      $button.toggleClass('active', isActive);
+      var ui = handler.ui($editable);
+      ui.toggleButton($button, isActive);
     };
   };
 

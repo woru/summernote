@@ -788,6 +788,10 @@ define([
              .select();
       }
     };
+
+    this.ui = function($editable) {
+      return handler.ui($editable);
+    }
   };
 
   return Editor;

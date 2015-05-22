@@ -64,12 +64,14 @@ define([
             $imageUrl = $dialog.find('.note-image-url'),
             $imageBtn = $dialog.find('.note-image-btn');
 
-        $imageDialog.one('shown.bs.modal', function () {
+        var ui = handler.ui($editable);
+
+        ui.onShowDialog($imageDialog, function () {
           // Cloning imageInput to clear element.
           $imageInput.replaceWith($imageInput.clone()
             .on('change', function () {
               deferred.resolve(this.files || this.value);
-              $imageDialog.modal('hide');
+              ui.hideDialog($imageDialog);
             })
             .val('')
           );
@@ -78,22 +80,24 @@ define([
             event.preventDefault();
 
             deferred.resolve($imageUrl.val());
-            $imageDialog.modal('hide');
+            ui.hideDialog($imageDialog);
           });
 
           $imageUrl.on('keyup paste', function (event) {
             var url;
-            
+
             if (event.type === 'paste') {
               url = event.originalEvent.clipboardData.getData('text');
             } else {
               url = $imageUrl.val();
             }
-            
+
             toggleBtn($imageBtn, url);
           }).val('').trigger('focus');
           bindEnterKey($imageUrl, $imageBtn);
-        }).one('hidden.bs.modal', function () {
+        }, true);
+
+        ui.onHideDialog($imageDialog, function () {
           $imageInput.off('change');
           $imageUrl.off('keyup paste keypress');
           $imageBtn.off('click');
@@ -101,7 +105,10 @@ define([
           if (deferred.state() === 'pending') {
             deferred.reject();
           }
-        }).modal('show');
+        }, true);
+
+        ui.showDialog($imageDialog);
+
       });
     };
   };

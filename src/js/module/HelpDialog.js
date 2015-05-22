@@ -11,9 +11,14 @@ define(function () {
       return $.Deferred(function (deferred) {
         var $helpDialog = $dialog.find('.note-help-dialog');
 
-        $helpDialog.one('hidden.bs.modal', function () {
+        var ui = handler.ui($editable);
+
+        ui.onHideDialog($helpDialog, function () {
           deferred.resolve();
-        }).modal('show');
+        }, true);
+
+        ui.showDialog($helpDialog);
+
       }).promise();
     };
 

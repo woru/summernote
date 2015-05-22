@@ -354,6 +354,10 @@ define([
       });
     };
 
+    this.ui = function ($editable) {
+      return dom.makeLayoutInfo($editable).holder().data('ui');
+    };
+
     /**
      * attach eventhandler
      *

@@ -47,7 +47,10 @@ define([
         $linkBtn = $linkDialog.find('.note-link-btn'),
         $openInNewWindow = $linkDialog.find('input[type=checkbox]');
 
-        $linkDialog.one('shown.bs.modal', function () {
+
+        var ui = handler.ui($editable);
+
+        ui.onShowDialog($linkDialog, function () {
           $linkText.val(linkInfo.text);
 
           $linkText.on('input', function () {
@@ -86,9 +89,12 @@ define([
               text: $linkText.val(),
               newWindow: $openInNewWindow.is(':checked')
             });
-            $linkDialog.modal('hide');
+
+            ui.hideDialog($linkDialog);
           });
-        }).one('hidden.bs.modal', function () {
+        }, true);
+
+        ui.onHideDialog($linkDialog, function () {
           // detach events
           $linkText.off('input keypress');
           $linkUrl.off('input keypress');
@@ -97,7 +103,9 @@ define([
           if (deferred.state() === 'pending') {
             deferred.reject();
           }
-        }).modal('show');
+        }, true);
+
+        ui.showDialog($linkDialog);
       }).promise();
     };
 
