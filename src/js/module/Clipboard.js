@@ -8,6 +8,18 @@ define([
       layoutInfo.editable().on('paste', hPasteClipboardImage);
     };
 
+    function imageSrcToBlob(datauri) {
+      var data = atob(datauri.split(',')[1]);
+      var array = new Uint8Array(data.length);
+      for (var i = 0; i < data.length; i++) {
+        array[i] = data.charCodeAt(i);
+      }
+
+      var blob = new Blob([array], {type: 'image/png'});
+      blob.name = 'clipboard.png';
+      return blob;
+    }
+
     /**
      * paste clipboard image
      *
@@ -25,47 +37,21 @@ define([
           return;
         }
 
-        // save cursor
-        handler.invoke('editor.saveNode', $editable);
-        handler.invoke('editor.saveRange', $editable);
-
-        $editable.html('');
-
         setTimeout(function () {
           var $img = $editable.find('img');
-
-          // if img is no in clipboard, insert text or dom
-          if (!$img.length || $img[0].src.indexOf('data:') === -1) {
-            var html = $editable.html();
-
-            handler.invoke('editor.restoreNode', $editable);
-            handler.invoke('editor.restoreRange', $editable);
-
-            handler.invoke('editor.focus', $editable);
-            try {
-              handler.invoke('editor.pasteHTML', $editable, html);
-            } catch (ex) {
-              handler.invoke('editor.insertText', $editable, html);
+          var changed = false;
+          $img.each(function () {
+            var image = this;
+            if (image.src.indexOf('data:') !== -1) {
+              changed = true;
+              var dataUri = image.src;
+              image.remove();
+              handler.insertImages(layoutInfo, [imageSrcToBlob(dataUri)]);
             }
-            return;
+          });
+          if (changed) {
+            handler.invoke('editor.afterCommand', $editable);
           }
-
-          var datauri = $img[0].src;
-
-          var data = atob(datauri.split(',')[1]);
-          var array = new Uint8Array(data.length);
-          for (var i = 0; i < data.length; i++) {
-            array[i] = data.charCodeAt(i);
-          }
-
-          var blob = new Blob([array], { type : 'image/png' });
-          blob.name = 'clipboard.png';
-
-          handler.invoke('editor.restoreNode', $editable);
-          handler.invoke('editor.restoreRange', $editable);
-          handler.insertImages(layoutInfo, [blob]);
-
-          handler.invoke('editor.afterCommand', $editable);
         }, 0);
 
         return;
